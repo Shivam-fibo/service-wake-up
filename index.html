@@ -215,34 +215,68 @@
             }
         }
 
-        async function wakeService(service) {
-            updateBadge(service.id, 'waking');
+        // async function wakeService(service) {
+        //     updateBadge(service.id, 'waking');
             
-            const controller = new AbortController();
-            const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+        //     const controller = new AbortController();
+        //     const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
 
-            try {
-                const response = await fetch(service.url, {
-                    method: 'GET',
-                    cache: 'no-store',
-                    signal: controller.signal
-                });
+        //     try {
+        //         const response = await fetch(service.url, {
+        //             method: 'GET',
+        //             cache: 'no-store',
+        //             signal: controller.signal
+        //         });
 
-                clearTimeout(timeoutId);
+        //         clearTimeout(timeoutId);
 
-                if (response.status >= 200 && response.status < 300) {
-                    updateBadge(service.id, 'online');
-                    return true;
-                } else {
-                    updateBadge(service.id, 'failed');
-                    return false;
-                }
-            } catch (error) {
-                clearTimeout(timeoutId);
-                updateBadge(service.id, 'failed');
-                return false;
+        //         if (response.status >= 200 && response.status < 300) {
+        //             updateBadge(service.id, 'online');
+        //             return true;
+        //         } else {
+        //             updateBadge(service.id, 'failed');
+        //             return false;
+        //         }
+        //     } catch (error) {
+        //         clearTimeout(timeoutId);
+        //         updateBadge(service.id, 'failed');
+        //         return false;
+        //     }
+        // }
+
+        async function wakeService(service) {
+
+    updateBadge(service.id, 'waking');
+
+    const MAX_WAIT = 5 * 60 * 1000; // 5 minutes
+    const RETRY_DELAY = 5000; // 5 sec between tries
+
+    const start = Date.now();
+
+    while (Date.now() - start < MAX_WAIT) {
+
+        try {
+            const response = await fetch(service.url, {
+                method: 'GET',
+                cache: 'no-store'
+            });
+
+            if (response.ok) {
+                updateBadge(service.id, 'online');
+                return true;
             }
+
+        } catch (err) {
+            // ignore network errors during cold start
         }
+
+        // wait before retry
+        await new Promise(r => setTimeout(r, RETRY_DELAY));
+    }
+
+    updateBadge(service.id, 'failed');
+    return false;
+}
 
         function updateTime() {
             const now = new Date();
