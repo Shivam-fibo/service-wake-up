@@ -1,0 +1,275 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Service Wake Dashboard</title>
+    <style>
+        :root {
+            --bg-color: #f5f5f7;
+            --card-bg: #ffffff;
+            --text-primary: #1d1d1f;
+            --text-secondary: #86868b;
+            --border-color: #d2d2d7;
+            --status-idle: #e5e5ea;
+            --status-idle-text: #8e8e93;
+            --status-waking: #ffdf70;
+            --status-waking-text: #8a6d0b;
+            --status-online: #d1fae5;
+            --status-online-text: #065f46;
+            --status-failed: #fee2e2;
+            --status-failed-text: #991b1b;
+            --button-bg: #007aff;
+            --button-text: #ffffff;
+            --button-disabled: #b4b4b4;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol";
+            background-color: var(--bg-color);
+            color: var(--text-primary);
+            margin: 0;
+            height: 100vh;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        .container {
+            background-color: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            width: 100%;
+            max-width: 400px;
+            padding: 24px;
+            box-sizing: border-box;
+            box-shadow: 0 1px 3px rgba(0, 0, 0, 0.05);
+        }
+
+        header {
+            text-align: center;
+            margin-bottom: 24px;
+        }
+
+        h1 {
+            font-size: 18px;
+            font-weight: 600;
+            margin: 0 0 8px 0;
+            letter-spacing: -0.01em;
+        }
+
+        p.subtitle {
+            font-size: 13px;
+            color: var(--text-secondary);
+            margin: 0;
+        }
+
+        .service-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 24px;
+        }
+
+        .service-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 8px 0;
+            border-bottom: 1px solid #f0f0f0;
+        }
+
+        .service-row:last-child {
+            border-bottom: none;
+        }
+
+        .service-name {
+            font-size: 14px;
+            font-weight: 500;
+        }
+
+        .badge {
+            font-size: 12px;
+            font-weight: 600;
+            padding: 4px 8px;
+            border-radius: 6px;
+            background-color: var(--status-idle);
+            color: var(--status-idle-text);
+            transition: background-color 0.2s ease, color 0.2s ease;
+        }
+
+        .badge.waking {
+            background-color: var(--status-waking);
+            color: var(--status-waking-text);
+        }
+
+        .badge.online {
+            background-color: var(--status-online);
+            color: var(--status-online-text);
+        }
+
+        .badge.failed {
+            background-color: var(--status-failed);
+            color: var(--status-failed-text);
+        }
+
+        button {
+            width: 100%;
+            padding: 10px;
+            background-color: var(--button-bg);
+            color: var(--button-text);
+            border: none;
+            border-radius: 6px;
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            transition: opacity 0.2s ease;
+        }
+
+        button:disabled {
+            background-color: var(--button-disabled);
+            cursor: not-allowed;
+        }
+
+        footer {
+            margin-top: 20px;
+            text-align: center;
+            border-top: 1px solid #f0f0f0;
+            padding-top: 12px;
+        }
+
+        .footer-text {
+            font-size: 11px;
+            color: var(--text-secondary);
+            margin: 4px 0;
+        }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <header>
+        <h1>Service Wake Dashboard</h1>
+        <p class="subtitle">Wake all backend services before testing</p>
+    </header>
+
+    <div class="service-list" id="serviceList">
+        <div class="service-row" data-service="chatbot">
+            <span class="service-name">Chatbot Backend</span>
+            <span class="badge" id="badge-chatbot">Idle</span>
+        </div>
+        <div class="service-row" data-service="webhook">
+            <span class="service-name">Webhook Service</span>
+            <span class="badge" id="badge-webhook">Idle</span>
+        </div>
+        <div class="service-row" data-service="agent">
+            <span class="service-name">Agent API</span>
+            <span class="badge" id="badge-agent">Idle</span>
+        </div>
+    </div>
+
+    <button id="wakeBtn">Wake All Services</button>
+
+    <footer>
+        <p class="footer-text">Internal Tool • Render Cold Start Mitigation</p>
+        <p class="footer-text" id="lastWakeTime">Last wake attempt: Never</p>
+    </footer>
+</div>
+
+<script>
+    (function() {
+        'use strict';
+
+        const services = [
+            { id: 'chatbot', name: 'Chatbot Backend', url: 'https://whatsapp-chatbot-backend-ceep.onrender.com/' },
+            { id: 'webhook', name: 'Webhook Service', url: 'https://whatsapp-webhook-vodo.onrender.com/' },
+            { id: 'agent', name: 'Agent API', url: 'https://wa-agent-jqaw.onrender.com/' }
+        ];
+
+        const wakeBtn = document.getElementById('wakeBtn');
+        const lastWakeTimeEl = document.getElementById('lastWakeTime');
+
+        function updateBadge(id, status) {
+            const badge = document.getElementById(`badge-${id}`);
+            if (!badge) return;
+
+            // Reset classes
+            badge.className = 'badge';
+            
+            switch (status) {
+                case 'waking':
+                    badge.classList.add('waking');
+                    badge.textContent = 'Waking...';
+                    break;
+                case 'online':
+                    badge.classList.add('online');
+                    badge.textContent = 'Online';
+                    break;
+                case 'failed':
+                    badge.classList.add('failed');
+                    badge.textContent = 'Failed';
+                    break;
+                default:
+                    badge.textContent = 'Idle';
+            }
+        }
+
+        async function wakeService(service) {
+            updateBadge(service.id, 'waking');
+            
+            const controller = new AbortController();
+            const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
+
+            try {
+                const response = await fetch(service.url, {
+                    method: 'GET',
+                    cache: 'no-store',
+                    signal: controller.signal
+                });
+
+                clearTimeout(timeoutId);
+
+                if (response.status >= 200 && response.status < 300) {
+                    updateBadge(service.id, 'online');
+                    return true;
+                } else {
+                    updateBadge(service.id, 'failed');
+                    return false;
+                }
+            } catch (error) {
+                clearTimeout(timeoutId);
+                updateBadge(service.id, 'failed');
+                return false;
+            }
+        }
+
+        function updateTime() {
+            const now = new Date();
+            lastWakeTimeEl.textContent = `Last wake attempt: ${now.toLocaleTimeString()}`;
+        }
+
+        wakeBtn.addEventListener('click', async () => {
+            wakeBtn.disabled = true;
+            wakeBtn.textContent = 'Waking Services...';
+            updateTime();
+
+            // Fire all requests in parallel
+            const promises = services.map(service => wakeService(service));
+            
+            await Promise.all(promises);
+
+            wakeBtn.textContent = 'Wake Complete';
+            
+            // Re-enable after 3 seconds
+            setTimeout(() => {
+                wakeBtn.disabled = false;
+                wakeBtn.textContent = 'Wake All Services';
+            }, 3000);
+        });
+
+    })();
+</script>
+
+</body>
+</html>
