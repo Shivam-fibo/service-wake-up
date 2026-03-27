@@ -167,6 +167,16 @@
             <span class="service-name">Agent API</span>
             <span class="badge" id="badge-agent">Idle</span>
         </div>
+        <div class="service-row" data-service="mcp">
+            <span class="service-name">MCP Server</span>
+            <span class="badge" id="badge-mcp">Idle</span>
+
+        </div>
+        <div class="service-row" data-service="automation">
+            <span class="service-name">Campaign Automation</span>
+            <span class="badge" id="badge-automation">Idle</span>
+        </div>
+
     </div>
 
     <button id="wakeBtn">Wake All Services</button>
@@ -184,7 +194,9 @@
         const services = [
             { id: 'chatbot', name: 'Chatbot Backend', url: 'https://whatsapp-chatbot-backend-ceep.onrender.com/' },
             { id: 'webhook', name: 'Webhook Service', url: 'https://whatsapp-webhook-vodo.onrender.com/' },
-            { id: 'agent', name: 'Agent API', url: 'https://wa-agent-jqaw.onrender.com/' }
+            { id: 'agent', name: 'Agent API', url: 'https://wa-agent-jqaw.onrender.com/' },
+            { id: 'mcp', name: 'MCP Server', url: 'https://template-mcp.onrender.com/health/' },
+            { id: 'automation', name: 'Campaign Automation', url: 'https://campaignagent.onrender.com/' }
         ];
 
         const wakeBtn = document.getElementById('wakeBtn');
@@ -214,35 +226,6 @@
                     badge.textContent = 'Idle';
             }
         }
-
-        // async function wakeService(service) {
-        //     updateBadge(service.id, 'waking');
-            
-        //     const controller = new AbortController();
-        //     const timeoutId = setTimeout(() => controller.abort(), 12000); // 12s timeout
-
-        //     try {
-        //         const response = await fetch(service.url, {
-        //             method: 'GET',
-        //             cache: 'no-store',
-        //             signal: controller.signal
-        //         });
-
-        //         clearTimeout(timeoutId);
-
-        //         if (response.status >= 200 && response.status < 300) {
-        //             updateBadge(service.id, 'online');
-        //             return true;
-        //         } else {
-        //             updateBadge(service.id, 'failed');
-        //             return false;
-        //         }
-        //     } catch (error) {
-        //         clearTimeout(timeoutId);
-        //         updateBadge(service.id, 'failed');
-        //         return false;
-        //     }
-        // }
 
         async function wakeService(service) {
 
